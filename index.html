@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Crypto Bot</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>AI Crypto Bot</h1>
+        <div id="crypto-data">
+            <!-- Display real-time data here -->
+        </div>
+        <div id="suggestion">
+            <!-- Display trading suggestion here -->
+        </div>
+        <div id="prediction">
+            <!-- Display AI prediction here -->
+        </div>
+        <div id="chart-container">
+            <canvas id="crypto-chart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        const symbol = "BTCUSDT";  // Trading pair (Bitcoin to USD)
+        const interval = "5m";     // Candlestick interval (5 minutes)
+        const limit = 100;         // Limit of candlesticks to fetch (latest 100 data points)
+
+        // Binance API endpoint for candlestick data
+        const getCandlestickData = async () => {
+            const url = `https://api.binance.com/api/v1/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`;
+            try {
+                const response = await axios.get(url);
+                const data = response.data;
+                return data.map(item => ({
+                    time: new Date(item[0]),
+                    open: parseFloat(item[1]),
+                    high: parseFloat(item[2]),
+                    low: parseFloat(item[3]),
+                    close: parseFloat(item[4]),
+                    volume: parseFloat(item[5]),
+                }));
+            } catch (error) {
+                console.error("Error fetching data from Binance:", error);
+            }
+        };
+
+        // Calculate a Simple Moving Average (SMA)
+        const calculateSMA = (data, period) => {
+            const sma = [];
+            for (let i = period - 1; i < data.length; i++) {
+                const sum = data.slice(i - period + 1, i + 1).reduce((acc, curr) => acc + curr.close, 0);
+                sma.push(sum / period);
+            }
+            return sma;
+        };
+
+        // Generate buy/sell suggestion based on Moving Average Cross Strategy
+        const generateTradingSuggestion = (data) => {
+            const shortSMA = calculateSMA(data, 10); // Short-term SMA (10 periods)
+            const longSMA = calculateSMA(data, 50);  // Long-term SMA (50 periods)
+            
+            // Compare the latest short and long SMAs
+            const lastShortSMA = shortSMA[shortSMA.length - 1];
+            const lastLongSMA = longSMA[longSMA.length - 1];
+
+            if (lastShortSMA > lastLongSMA) {
+                return "Buy: The short-term trend is above the long-term trend.";
+            } else if (lastShortSMA < lastLongSMA) {
+                return "Sell: The short-term trend is below the long-term trend.";
+            } else {
+                return "Hold: The trends are neutral.";
+            }
+        };
+
+        // AI Prediction (Simple Example)
+        const aiPrediction = () => {
+            // For simplicity, we're just using a dummy prediction here.
+            // Replace with actual ML model or GPT-3 for real predictions.
+            return "AI Prediction: The market might go up in the next 15 minutes.";
+        };
+
+        // Function to display real-time data, trading suggestion, and prediction
+        const updateDataAndSuggestions = async () => {
+            const candlesticks = await getCandlestickData();
+
+            // Display real-time data
+            const latestData = candlesticks[candlesticks.length - 1];
+            document.getElementById('crypto-data').innerHTML = `
+                <h2>Latest Data for ${symbol}</h2>
+                <p><strong>Time:</strong> ${latestData.time.toLocaleTimeString()}</p>
+                <p><strong>Open:</strong> $${latestData.open.toFixed(2)}</p>
+                <p><strong>High:</strong> $${latestData.high.toFixed(2)}</p>
+                <p><strong>Low:</strong> $${latestData.low.toFixed(2)}</p>
+                <p><strong>Close:</strong> $${latestData.close.toFixed(2)}</p>
+            `;
+
+            // Display trading suggestion
+            const tradingSuggestion = generateTradingSuggestion(candlesticks);
+            document.getElementById('suggestion').innerHTML = `<h2>Trading Suggestion</h2><p>${tradingSuggestion}</p>`;
+
+            // Display AI prediction
+            const prediction = aiPrediction();
+            document.getElementById('prediction').innerHTML = `<h2>AI Prediction</h2><p>${prediction}</p>`;
+
+            // Display Chart (for visualization)
+            const ctx = document.getElementById('crypto-chart').getContext('2d');
+            const chartData = candlesticks.map(item => ({
+                x: item.time,
+                o: item.open,
+                h: item.high,
+                l: item.low,
+                c: item.close
+            }));
+
+            const chart = new Chart(ctx, {
+                type: 'candlestick',
+                data: {
+                    datasets: [{
+                        label: symbol,
+                        data: chartData,
+                        borderColor: 'black',
+                        borderWidth: 1,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'minute',
+                                tooltipFormat: 'll HH:mm',
+                            },
+                        },
+                        y: {
+                            ticks: {
+                                beginAtZero: false,
+                                callback: function(value) {
+                                    return value.toFixed(2);
+                                },
+                            },
+                        },
+                    },
+                },
+            });
+        };
+
+        // Update every 5 minutes
+        setInterval(updateDataAndSuggestions, 300000); // 300000 ms = 5 minutes
+
+        // Initial update
+        window.onload = updateDataAndSuggestions;
+    </script>
+</body>
+</html>
