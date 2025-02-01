@@ -125,20 +125,21 @@
             return sma;
         };
 
-        // Trading Signal
-        const generateTradingSignal = (data) => {
-            if (data.length < 50) return "Not enough data.";
+        // Function to generate a correct Buy/Hold/Sell Signal
+const generateTradingSignal = (data) => {
+    if (data.length < 6) return "Not enough data.";
 
-            const shortSMA = calculateSMA(data, 10);
-            const longSMA = calculateSMA(data, 50);
+    const currentClose = data[data.length - 1].close;  // Latest price
+    const pastClose = data[data.length - 6].close;     // Price 5 minutes ago
 
-            const lastShortSMA = shortSMA[shortSMA.length - 1];
-            const lastLongSMA = longSMA[longSMA.length - 1];
-
-            if (lastShortSMA > lastLongSMA) return "BUY: Uptrend detected.";
-            if (lastShortSMA < lastLongSMA) return "SELL: Downtrend detected.";
-            return "HOLD: Market neutral.";
-        };
+    if (currentClose > pastClose * 1.002) {
+        return "🚀 BUY: Strong Uptrend Detected.";
+    } else if (currentClose < pastClose * 0.998) {
+        return "🔻 SELL: Downtrend Detected.";
+    } else {
+        return "⏸️ HOLD: Market is Neutral.";
+    }
+};
 
         // AI Prediction for Next 5 Min
         const aiPrediction = (data) => {
